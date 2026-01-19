@@ -28,6 +28,8 @@
 % the price of the house
 
 % To be able to solve such a big problem, I switched to 5 year model period.
+% Note that p5 must be at least 3 (for Farmer-Toda) so years-owned >= 2.
+p5=5; % model period, in years (just used this to modify some parameters from annual to model period)
 
 %% How does VFI Toolkit think about this?
 %
@@ -43,14 +45,14 @@
 % period is ages 20-24, and last period is ages 75-79.
 
 Params.agejshifter=19; % Age 20 minus one. Makes keeping track of actual age easy in terms of model age
-Params.J=(79-Params.agejshifter)/5; % =81, Number of period in life-cycle
+Params.J=ceil((79-Params.agejshifter)/p5); % =81, Number of period in life-cycle
 
 % Grid sizes to use
 n_d=[11,101,5]; % Decisions: riskyshare, savings, buyhouse (note, SemiExoStateFn hardcodes that buyhouse is 5 points)
 n_a=[3,21]; % Endogenous housing and asset holdings
-n_semiz=[5,5,6,3]; % Semi-exog: house prices before/after purchase, years since purchase (one minus this is the duration of mortgages in model periods), and downpayment
+n_semiz=[5,5,ceil(30/p5),3]; % Semi-exog: house prices before/after purchase, years since purchase (one minus this is the 30y duration of mortgages in model periods), and downpayment
 n_z=7; % Exogenous labor productivity units shock
-n_u=5; % Between period i.i.d. shock
+n_u=p5; % Between period i.i.d. shock
 N_j=Params.J; % Number of periods in finite horizon
 
 vfoptions.riskyasset=1; % riskyasset aprime(d,u)
@@ -81,8 +83,6 @@ simoptions.refine_d=vfoptions.refine_d;
 
 %% Parameters
 
-p5=5; % model period, in years (just used this to modify some parameters from annual to model period)
-
 % Housing
 Params.f_htc=0; % transaction cost of buying/selling house (is a percent of h+prime)
 % Params.minhouse % set below, is the minimum value of house that can be purchased
@@ -100,17 +100,17 @@ Params.sigma_h=0.5; % Relative importance of housing services (vs consumption) i
 Params.w=1; % Wage
 
 % Asset returns
-Params.r=0.05^p5; % Rate of return on risk free asset
+Params.r=(1.05^p5)-1; % Rate of return on risk free asset
 % u is the stochastic component of the excess returns to the risky asset
-Params.rp=0.03^p5; % Mean excess returns to the risky asset (so the mean return of the risky asset will be r+rp)
+Params.rp=(1.03^p5)-1; % Mean excess returns to the risky asset (so the mean return of the risky asset will be r+rp)
 Params.sigma_u=0.025; % Standard deviation of innovations to the risky asset
-Params.rho_u=0; % Asset return risk component is modeled as iid (if you regresse, e.g., the percent change in S&P500 on it's one year lag you get a coefficient of essentially zero)
+Params.rho_u=0; % Asset return risk component is modeled as iid (if you regressed, e.g., the percent change in S&P500 on it's one year lag you get a coefficient of essentially zero)
 [u_grid, pi_u]=discretizeAR1_FarmerToda(Params.rp,Params.rho_u,Params.sigma_u,n_u);
 pi_u=pi_u(1,:)'; % This is iid
 
 % Demographics
 Params.agej=1:1:Params.J; % Is a vector of all the agej: 1,2,3,...,J
-Params.Jr=10; % Age 65 (period 10 is ages 65-69)
+Params.Jr=ceil((65-Params.agejshifter)/p5); % Age 65 (period 10 is ages 65-69 in the 5 year case)
 
 % Pensions
 Params.pension=0.4; % Increased to be greater than rental costs
@@ -132,8 +132,8 @@ Params.dj=[0.006879, 0.000463, 0.000307, 0.000220, 0.000184, 0.000172, 0.000160,
     0.016558, 0.018029, 0.019723, 0.021607, 0.023723, 0.026143, 0.028892, 0.031988, 0.035476, 0.039238, 0.043382, 0.047941, 0.052953, 0.058457, 0.064494,...
     0.071107, 0.078342, 0.086244, 0.094861, 0.104242, 0.114432, 0.125479, 0.137427, 0.150317, 0.164187, 0.179066, 0.194979, 0.211941, 0.229957, 0.249020, 0.269112, 0.290198, 0.312231, 1.000000]; 
 % dj covers Ages 0 to 100
-Params.sj=prod(1-reshape(Params.dj(1:100),[5,20]),1); % five-year survival rates
-Params.sj=Params.sj(5:5+N_j-1); % Just the ages we are using
+Params.sj=prod(1-reshape(Params.dj(1:p5*floor(100/p5)),[p5,floor(100/p5)]),1); % p5-year survival rates, may not reach 100 years old
+Params.sj=Params.sj(1+ceil(20/p5):ceil(20/p5)+N_j); % Just the ages we are using (20yo and up)
 Params.sj(end)=0; % In the present model the last period (j=J) value of sj is actually irrelevant
 
 %% Mortgages
