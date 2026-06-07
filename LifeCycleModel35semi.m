@@ -160,16 +160,27 @@ Params.probhousepricefall=0.2; % decrease one grid point
 % The grids on house prices (pbefore_grid and pafter_grid are below).
 
 %% Grids
+precision='single';
+if strcmp(precision,'single')
+    precision_cast=@(x) single(x)
+    pgrid_min_spacing=1e-7;
+else
+    precision_cast=@(x) x
+    pgrid_min_spacing=1e-14;
+end
+farmertodaoptions.precision=precision;
+mcmomentsoptions.precision=precision;
+
 % The ^3 means that there are more points near 0 than near 1. We know from
 % theory that the value function will be more 'curved' near zero assets,
 % and putting more points near curvature (where the derivative changes the most) increases accuracy of results.
-asset_grid=10*(linspace(0,1,n_a(2)))'; % Note, I use equal spacing (normally would put most points near zero)
+asset_grid=10*(linspace(precision_cast(0),1,n_a(2)))'; % Note, I use equal spacing (normally would put most points near zero)
 % note: will go from 0 to 10
-assetprime_grid=10*(linspace(0,1,n_d(2)))'; % Want to let n_d(2) have different number of grid points from n_a(2).
+assetprime_grid=10*(linspace(precision_cast(0),1,n_d(2)))'; % Want to let n_d(2) have different number of grid points from n_a(2).
 
 % age20avgincome=Params.w*Params.kappa_j(1);
 % house_grid=[0; logspace(2*age20avgincome, 12*age20avgincome, 5)'];
-house_grid=(0:1:n_a(1)-1)';
+house_grid=(precision_cast(0):1:n_a(1)-1)';
 % Note, we can see from w*kappa_j*z and the values of these, that average
 % income is going to be around one, so will just use this simpler house grid
 % [We can think about the values of the house_grid as being relative the average income (or specifically average at a given age)]
@@ -180,12 +191,14 @@ Params.minhouse=house_grid(2); % first is zero (no house)
 z_grid=exp(z_grid); % Take exponential of the grid
 [mean_z,~,~,~]=MarkovChainMoments(z_grid,pi_z); % Calculate the mean of the grid so as can normalise it
 z_grid=z_grid./mean_z; % Normalise the grid on z (so that the mean of z is exactly 1)
+z_grid=precision_cast(z_grid);
+pi_z=precision_cast(pi_z);
 
 % Share of assets invested in the risky asset
-riskyshare_grid=linspace(0,1,n_d(1))'; % Share of assets, from 0 to 1
+riskyshare_grid=linspace(precision_cast(0),1,n_d(1))'; % Share of assets, from 0 to 1
 
 % buyhouse
-buyhouse_grid=(0:1:n_d(3)-1)';
+buyhouse_grid=(precision_cast(0):1:n_d(3)-1)';
 
 % Set up d for VFI Toolkit (is the two decision variables)
 d_grid=[riskyshare_grid; assetprime_grid; buyhouse_grid]; % Note: this does not have to be a_grid, I just chose to use same grid for savings as for assets
@@ -193,21 +206,21 @@ d_grid=[riskyshare_grid; assetprime_grid; buyhouse_grid]; % Note: this does not 
 a_grid=[house_grid; asset_grid];
 
 % Now the semi-exogenous states, we define SemiExoStateFn later, for now just some grids
-pbefore_grid=[0.8,1,1.2,1.4,1.6]'; % 1 represents price when agent is 'born'
-pafter_grid=[0.8,1,1.2,1.4,1.6]'; % 1 represents price when house is purchased
+pbefore_grid=precision_cast([0.8,1,1.2,1.4,1.6])'; % 1 represents price when agent is 'born'
+pafter_grid=precision_cast([0.8,1,1.2,1.4,1.6])'; % 1 represents price when house is purchased
 % Note: is purely coincidence that pbefore and pafter use same grids (both
 % must be equally spaced, but no need to be same values, nor same number of points)
-yearsowned_grid=[(0:1:(n_semiz(3)-2))';100]; % note: 100 is an absorbing state representing 30+ years (so mortgage is fully repaid)
-downpayment_grid=[0.2,0.4,0.6]'; % downpayment for new house must be 20%, 40%, 60%.
+yearsowned_grid=[(precision_cast(0):1:(n_semiz(3)-2))';100]; % note: 100 is an absorbing state representing 30+ years (so mortgage is fully repaid)
+downpayment_grid=precision_cast([0.2,0.4,0.6])'; % downpayment for new house must be 20%, 40%, 60%.
 semiz_grid=[pbefore_grid; pafter_grid; yearsowned_grid; downpayment_grid];
 % Note, SemiExoStateFn hardcodes that the grid spacing for pbefore_grid
 % must be evenly spaced, and same for pafter_grid.
 Params.pbeforespacing=pbefore_grid(2)-pbefore_grid(1);
-if any(abs(pbefore_grid(2:end)-pbefore_grid(1:end-1)-Params.pbeforespacing) > 1e-14)
+if any(abs(pbefore_grid(2:end)-pbefore_grid(1:end-1)-Params.pbeforespacing) > pgrid_min_spacing)
     error('pbefore_grid must be evenly spaced (is hardcoded in SemiExoStateFn)')
 end
 Params.pafterspacing=pafter_grid(2)-pafter_grid(1);
-if any(abs(pafter_grid(2:end)-pafter_grid(1:end-1)-Params.pafterspacing) > 1e-14)
+if any(abs(pafter_grid(2:end)-pafter_grid(1:end-1)-Params.pafterspacing) > pgrid_min_spacing)
     error('pafter_grid must be evenly spaced (is hardcoded in SemiExoStateFn)')
 end
 % need to store max/min of pbefore and pafter grids, so we can use them in
@@ -224,7 +237,11 @@ Params.pafter1=2; % second element is 1, which is where we want to start
 
 % riskyasset: aprime_val=aprimeFn(d,u)
 % vfoptions.refine_d: the decision variables input to aprimeFn are d2,d3
-aprimeFn=@(riskyshare,savings,u, r) LifeCycleModel35semiz_aprimeFn(riskyshare,savings, u, r); % Will return the value of aprime
+if strcmp(precision,'single')
+    aprimeFn=@(riskyshare,savings,u, r) LifeCycleModel35semiz_aprimeFn_single(riskyshare,savings, u, r); % Will return the value of aprime
+else
+    aprimeFn=@(riskyshare,savings,u, r) LifeCycleModel35semiz_aprimeFn(riskyshare,savings, u, r); % Will return the value of aprime
+end
 % Note that u is risky asset excess return and effectively includes both the (excess) mean and standard deviation of risky assets
 
 %% Put the risky asset into vfoptions and simoptions
@@ -249,8 +266,13 @@ simoptions.d_grid=d_grid;
 vfoptions.n_semiz=n_semiz;
 vfoptions.semiz_grid=semiz_grid;
 % Define the transition probabilities of the semi-exogenous states
-vfoptions.SemiExoStateFn=@(pbefore,pafter,yearsowned,downpayment,pbeforeprime,pafterprime,yearsownedprime,downpaymentprime,buyhouse, probhousepricerise, probhousepricefall,pbeforespacing, pafterspacing,maxpbefore, minpbefore,maxpafter, minpafter,mortgageduration)...
-    LifeCycleModel35semiz_SemiExoStateFn(pbefore,pafter,yearsowned,downpayment,pbeforeprime,pafterprime,yearsownedprime,downpaymentprime,buyhouse, probhousepricerise, probhousepricefall,pbeforespacing, pafterspacing,maxpbefore, minpbefore,maxpafter, minpafter,mortgageduration);
+if strcmp(precision,'single')
+    vfoptions.SemiExoStateFn=@(pbefore,pafter,yearsowned,downpayment,pbeforeprime,pafterprime,yearsownedprime,downpaymentprime,buyhouse, probhousepricerise, probhousepricefall,pbeforespacing, pafterspacing,maxpbefore, minpbefore,maxpafter, minpafter,mortgageduration)...
+        LifeCycleModel35semiz_SemiExoStateFn_single(pbefore,pafter,yearsowned,downpayment,pbeforeprime,pafterprime,yearsownedprime,downpaymentprime,buyhouse, probhousepricerise, probhousepricefall,pbeforespacing, pafterspacing,maxpbefore, minpbefore,maxpafter, minpafter,mortgageduration);
+else
+    vfoptions.SemiExoStateFn=@(pbefore,pafter,yearsowned,downpayment,pbeforeprime,pafterprime,yearsownedprime,downpaymentprime,buyhouse, probhousepricerise, probhousepricefall,pbeforespacing, pafterspacing,maxpbefore, minpbefore,maxpafter, minpafter,mortgageduration)...
+        LifeCycleModel35semiz_SemiExoStateFn(pbefore,pafter,yearsowned,downpayment,pbeforeprime,pafterprime,yearsownedprime,downpaymentprime,buyhouse, probhousepricerise, probhousepricefall,pbeforespacing, pafterspacing,maxpbefore, minpbefore,maxpafter, minpafter,mortgageduration);
+end
 
 % We also need to tell simoptions about the semi-exogenous states
 simoptions.SemiExoStateFn=vfoptions.SemiExoStateFn;
@@ -268,8 +290,14 @@ simoptions.d_grid=d_grid;
 DiscountFactorParamNames={'beta','sj'};
 
 % Use 'LifeCycleModel35semiz_ReturnFn'
-ReturnFn=@(savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,r,sigma,agej,Jr,pension,kappa_j,sigma_h,f_htc,minhouse,rentprice,houseservices,mortgageduration) ...
-    LifeCycleModel35semiz_ReturnFn(savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,r,sigma,agej,Jr,pension,kappa_j,sigma_h,f_htc,minhouse,rentprice,houseservices,mortgageduration)
+if strcmp(precision,'single')
+    ReturnFn=@(savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,r,sigma,agej,Jr,pension,kappa_j,sigma_h,f_htc,minhouse,rentprice,houseservices,mortgageduration) ...
+        LifeCycleModel35semiz_ReturnFn_single(savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,r,sigma,agej,Jr,pension,kappa_j,sigma_h,f_htc,minhouse,rentprice,houseservices,mortgageduration)
+else
+    ReturnFn=@(savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,r,sigma,agej,Jr,pension,kappa_j,sigma_h,f_htc,minhouse,rentprice,houseservices,mortgageduration) ...
+        LifeCycleModel35semiz_ReturnFn(savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,r,sigma,agej,Jr,pension,kappa_j,sigma_h,f_htc,minhouse,rentprice,houseservices,mortgageduration)
+end
+
 % vfoptions.refine_d, with semiz: only (d1,d3,d4,..) are input to ReturnFn [this model has no d1, so here just d3,d4]
 
 %% Now solve the value function iteration problem, just to check that things are working before we go to General Equilbrium
@@ -299,7 +327,7 @@ size(Policy)
 %% Initial distribution of agents at birth (j=1)
 % Before we plot the life-cycle profiles we have to define how agents are
 % at age j=1. We will give them all zero assets.
-jequaloneDist=zeros([n_a,n_semiz,n_z],'gpuArray'); % Put no households anywhere on grid
+jequaloneDist=zeros([n_a,n_semiz,n_z],precision,'gpuArray'); % Put no households anywhere on grid
 jequaloneDist(1,1,Params.pbefore1,Params.pafter1,1,1,ceil(n_z/2))=1; 
 % All agents start with no house, zero assets
 % note: yearsowned=0 and downpayment=0.2 initial values are anyway irrelevant
@@ -309,7 +337,7 @@ jequaloneDist(1,1,Params.pbefore1,Params.pafter1,1,1,ceil(n_z/2))=1;
 % Start with a mass of one at initial age, use the conditional survival
 % probabilities sj to calculate the mass of those who survive to next
 % period, repeat. Once done for all ages, normalize to one
-Params.mewj=ones(1,Params.J); % Marginal distribution of households over age
+Params.mewj=ones(1,Params.J,precision); % Marginal distribution of households over age
 for jj=2:length(Params.mewj)
     Params.mewj(jj)=Params.sj(jj-1)*Params.mewj(jj-1);
 end
