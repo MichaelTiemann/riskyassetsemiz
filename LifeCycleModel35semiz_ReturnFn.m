@@ -13,7 +13,7 @@ end
 % Note: make first mortgage payment is same year you buy house (this could
 % be changed to be making a mortgage payment on the previous house)
 housevalueatpurchase=0; % if buyhouse==0, need to create or gpu objects
-if buyhouse==6
+if buyhouse==4
     housevalueatpurchase=h*pbefore;
 elseif buyhouse>0
     housevalueatpurchase=h*pbefore*pafter; 
