@@ -3,7 +3,7 @@ function F=LifeCycleModel35semiz_ReturnFn(savings,buyhouse,hprime,h,a,pbefore,pa
 % vfoptions.refine_d: only decisions d1,d3 are input to ReturnFn (and this model has no d1)
 
 %% First, deal with house and mortgage aspects
-if buyhouse==6
+if buyhouse==4
     relevantdownpayment=olddownpayment;
 else
     relevantdownpayment=0.2*buyhouse;
