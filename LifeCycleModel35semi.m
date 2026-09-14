@@ -93,8 +93,8 @@ Params.houseservices=0.3; % housing services as a fraction of house value
 % Discount rate
 Params.beta = 0.96^p5;
 % Preferences
-Params.sigma=10; % Coeff of relative risk aversion (curvature of consumption)
-Params.phi=10; % Additional risk aversion (from Epstein-Zin preferences)
+Params.sigma=2; % Coeff of relative risk aversion (curvature of consumption)
+Params.phi=2; % Additional risk aversion (from Epstein-Zin preferences)
 Params.sigma_h=0.5; % Relative importance of housing services (vs consumption) in utility
 
 % Prices
@@ -321,18 +321,18 @@ StationaryDist=StationaryDist_FHorz_Case1(jequaloneDist,AgeWeightsParamNames,Pol
 
 %% FnsToEvaluate are how we say what we want to graph the life-cycles of
 % Takes all the d, then relevant aprime, then a, then semiz, then z
-FnsToEvaluate.riskyshare=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) riskyshare; % riskyshare, is the fraction of savings invested in the risky asset
-FnsToEvaluate.earnings=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,kappa_j) w*kappa_j*z; % labor earnings
-FnsToEvaluate.assets=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) a; % a is the current asset holdings
-FnsToEvaluate.housing=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) h; % h is housing holdings
+FnsToEvaluate.riskyshare=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) riskyshare; % riskyshare, is the fraction of savings invested in the risky asset
+FnsToEvaluate.earnings=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z,w,kappa_j) w*kappa_j*z; % labor earnings
+FnsToEvaluate.assets=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) a; % a is the current asset holdings
+FnsToEvaluate.housing=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) h; % h is housing holdings
 
 
-FnsToEvaluate.buyhouse=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) buyhouse; % h is housing holdings
-FnsToEvaluate.pbefore=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) pbefore; % h is housing holdings
-FnsToEvaluate.pafter=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) pafter; % h is housing holdings
-FnsToEvaluate.olddownpayment=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) olddownpayment; % h is housing holdings
-FnsToEvaluate.yearsowned=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) yearsowned; % yearsowned, note, goes a bit silly due to the 100 being 5+ 
-% FnsToEvaluate.yearsowned=@(savings,riskyshare,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) yearsowned*(yearsowned~=100); % yearsowned, note, goes a bit silly due to the 100 being 5+ 
+FnsToEvaluate.buyhouse=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) buyhouse; % h is housing holdings
+FnsToEvaluate.pbefore=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) pbefore; % h is housing holdings
+FnsToEvaluate.pafter=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) pafter; % h is housing holdings
+FnsToEvaluate.olddownpayment=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) olddownpayment; % h is housing holdings
+FnsToEvaluate.yearsowned=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) yearsowned; % yearsowned, note, goes a bit silly due to the 100 being 5+ 
+% FnsToEvaluate.yearsowned=@(riskyshare,savings,buyhouse,hprime,h,a,pbefore,pafter,yearsowned,olddownpayment,z) yearsowned*(yearsowned~=100); % yearsowned, note, goes a bit silly due to the 100 being 5+ 
 
 % notice that we have called these riskyshare, earnings and assets
 
